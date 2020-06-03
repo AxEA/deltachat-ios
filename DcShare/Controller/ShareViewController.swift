@@ -2,6 +2,7 @@ import UIKit
 import Social
 import DcCore
 import MobileCoreServices
+import Intents
 
 
 class ShareViewController: SLComposeServiceViewController {
@@ -59,13 +60,21 @@ class ShareViewController: SLComposeServiceViewController {
         DispatchQueue.global(qos: .background).async {
             self.shareAttachment = ShareAttachment(dcContext: self.dcContext, inputItems: self.extensionContext?.inputItems, delegate: self)
         }
+
+        if #available(iOSApplicationExtension 13.0, *) {
+            if let intent = self.extensionContext?.intent as? INSendMessageIntent, let chatId = Int(intent.conversationIdentifier ?? "") {
+                selectedChatId = chatId
+            }
+        }
     }
 
     override func presentationAnimationDidFinish() {
         if dbHelper.currentDatabaseLocation == dbHelper.sharedDbFile {
             dcContext.logger = self.logger
             dcContext.openDatabase(dbFile: dbHelper.sharedDbFile)
-            selectedChatId = dcContext.getChatIdByContactId(contactId: Int(DC_CONTACT_ID_SELF))
+            if selectedChatId == nil {
+                selectedChatId = dcContext.getChatIdByContactId(contactId: Int(DC_CONTACT_ID_SELF))
+            }
             if let chatId = selectedChatId {
                 selectedChat = dcContext.getChat(chatId: chatId)
             }
