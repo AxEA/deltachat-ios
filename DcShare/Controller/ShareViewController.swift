@@ -65,11 +65,16 @@ class ShareViewController: SLComposeServiceViewController {
         if dbHelper.currentDatabaseLocation == dbHelper.sharedDbFile {
             dcContext.logger = self.logger
             dcContext.openDatabase(dbFile: dbHelper.sharedDbFile)
-            selectedChatId = dcContext.getChatIdByContactId(contactId: Int(DC_CONTACT_ID_SELF))
-            if let chatId = selectedChatId {
-                selectedChat = dcContext.getChat(chatId: chatId)
+            if dcContext.isConfigured() {
+                selectedChatId = dcContext.getChatIdByContactId(contactId: Int(DC_CONTACT_ID_SELF))
+                if let chatId = selectedChatId {
+                    selectedChat = dcContext.getChat(chatId: chatId)
+                }
+                reloadConfigurationItems()
+            } else {
+                let errorViewController = ErrorViewController(delegate: self)
+                self.pushConfigurationViewController(errorViewController)
             }
-            reloadConfigurationItems()
         } else {
             cancel()
         }
@@ -142,6 +147,19 @@ class ShareViewController: SLComposeServiceViewController {
     override func didSelectCancel() {
         quit()
     }
+
+    func popControllerAndClose() {
+        DispatchQueue.main.async {
+            self.popConfigurationViewController()
+            self.quit()
+        }
+    }
+}
+
+extension ShareViewController: ErrorViewControllerDelegate {
+    func onCancelPressed() {
+        popControllerAndClose()
+    }
 }
 
 extension ShareViewController: ChatListDelegate {
@@ -155,10 +173,7 @@ extension ShareViewController: ChatListDelegate {
 
 extension ShareViewController: SendingControllerDelegate {
     func onSendingAttemptFinished() {
-        DispatchQueue.main.async {
-            self.popConfigurationViewController()
-            self.quit()
-        }
+        popControllerAndClose()
     }
 }
 
